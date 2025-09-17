@@ -21,7 +21,7 @@ export default function Sidebar({
 	const [tab, setTab] = useState<"details" | "chat">(defaultTab);
 
 	return (
-		<div className="h-full grid grid-rows-[auto_auto_1fr] bg-[#0b0c1a] text-white border-l border-white/10">
+		<div className="h-full min-h-0 grid grid-rows-[auto_auto_minmax(0,1fr)] bg-[#0b0c1a] text-white border-l border-white/10 overflow-hidden">
 			<div className="flex items-center justify-between px-3 py-2 bg-[#0f1020]">
 				<div className="font-bold tracking-wide">ATOA Panel</div>
 				<button
@@ -45,7 +45,7 @@ export default function Sidebar({
 					Chat
 				</button>
 			</div>
-			<div className="overflow-hidden">
+			<div className="h-full overflow-hidden min-h-0">
 				{tab === "details" ? (
 					<div className="p-3 h-full overflow-y-auto">
 						{selectedAgent ? (

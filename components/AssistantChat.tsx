@@ -99,9 +99,9 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 	}
 
 	return (
-		<div className="h-full grid grid-rows-[auto_auto_1fr_auto] bg-[#0f1020] text-white border-l border-white/10">
-			<header className="px-4 py-3 bg-[#141532] text-white font-extrabold">Assistant Agent</header>
-			<div className="px-3 py-2 flex gap-2 items-center bg-[#0f1020] border-b border-white/10">
+		<div className="h-full flex flex-col bg-[#0f1020] text-white border-l border-white/10 min-h-0 basis-auto">
+			<header className="px-4 py-3 bg-[#141532] text-white font-extrabold flex-shrink-0">Assistant Agent</header>
+			<div className="px-3 py-2 flex gap-2 items-center bg-[#0f1020] border-b border-white/10 flex-shrink-0">
 				<span className="text-xs text-white/70">Persona</span>
 				<input
 					className="flex-1 bg-[#11132a] text-white placeholder:text-white/50 border border-white/10 px-2 py-1 ring-1 ring-white/10 focus:outline-none text-xs"
@@ -110,7 +110,7 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 					onChange={(e) => persistPersona(e.target.value)}
 				/>
 			</div>
-			<div ref={scrollerRef} className="p-3 overflow-y-auto space-y-3">
+			<div ref={scrollerRef} className="flex-1 p-3 overflow-y-auto overscroll-y-contain space-y-3 min-h-0" style={{maxHeight: "calc(100vh - 220px)"}}>
 				{messages.map((m, idx) => (
 					<div key={idx} className={m.role === "user" ? "text-right" : "text-left"}>
 						<motion.div
@@ -119,8 +119,8 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 							transition={{ duration: 0.25 }}
 							className={
 								m.role === "user"
-									? "inline-block bg-[#00BBF9] text-black ring-2 ring-black px-3 py-2 max-w-[90%]"
-								: "inline-block bg-[#2a2b45] text-white ring-1 ring-white/15 px-3 py-2 max-w-[90%]"
+									? "inline-block bg-[#00BBF9] text-black ring-2 ring-black px-3 py-2 max-w-[90%] rounded-2xl rounded-br-sm"
+									: "inline-block bg-[#2a2b45] text-white ring-1 ring-white/15 px-3 py-2 max-w-[90%] rounded-2xl rounded-bl-sm"
 							}
 						>
 							<pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed">{m.text}</pre>
@@ -128,7 +128,7 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 					</div>
 				))}
 			</div>
-			<div className="p-3 flex gap-2 border-t border-white/10 bg-[#0f1020]">
+			<div className="p-3 flex gap-2 border-t border-white/10 bg-[#0f1020] flex-shrink-0">
 				<input
 					className="flex-1 bg-[#11132a] text-white placeholder:text-white/50 border border-white/10 px-3 py-2 ring-1 ring-white/10 focus:outline-none"
 					placeholder='Ask for agents: "route USD to EUR"'

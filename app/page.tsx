@@ -19,7 +19,7 @@ export default function Home() {
     return () => window.removeEventListener("atoa:consume-credit", onConsume);
   }, []);
   return (
-    <div className={`w-screen h-screen grid ${sidebarOpen ? "grid-cols-[1fr_360px] md:grid-cols-[1fr_420px]" : "grid-cols-[1fr_0px]"}`}>
+    <div className={`w-screen h-screen min-h-0 overflow-hidden grid ${sidebarOpen ? "grid-cols-[1fr_360px] md:grid-cols-[1fr_420px]" : "grid-cols-[1fr_0px]"}`}>
       <div className="relative">
         <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20">
           <div className="px-3 py-1 bg-black/70 text-white ring-2 ring-white/20 text-sm font-bold">Credits: {credits}</div>
@@ -33,7 +33,7 @@ export default function Home() {
           {sidebarOpen ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
         </button>
       </div>
-      <div className="relative">
+      <div className="relative h-full min-h-0">
         <Sidebar
           selectedAgent={selected ? { id: selected.id, name: selected.name, score: Math.random() * 1 } : null}
           onCollapse={() => setSidebarOpen(false)}
