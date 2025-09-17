@@ -152,7 +152,7 @@ export default function FlowMap({ graph, onSelect }: { graph?: AgentGraph | null
         animated: animateEdges,
         style: { stroke: "#00F5D4", strokeWidth: 2 },
         markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: "#00F5D4" },
-        label: (e as any).label,
+        label: e.label,
         labelStyle: { fill: "#a78bfa", fontWeight: 700 },
       })),
     [edges, animateEdges]
@@ -167,7 +167,7 @@ export default function FlowMap({ graph, onSelect }: { graph?: AgentGraph | null
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
-        onNodeClick={(_, node) => onSelect?.({ id: node.id, name: (node.data as any).label })}
+        onNodeClick={(_, node) => onSelect?.({ id: node.id, name: (node.data as { label: string }).label })}
         fitView
         fitViewOptions={{ padding: 0.2 }}
         proOptions={{ hideAttribution: true }}

@@ -91,7 +91,7 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 			});
 			const data = (await res.json()) as { answer: string };
 			setMessages((m) => [...m, { role: "assistant", text: data.answer }]);
-		} catch (e) {
+      } catch {
 			setMessages((m) => [...m, { role: "assistant", text: "Sorry, I couldn't generate an answer right now." }]);
 		} finally {
 			setLoading(false);

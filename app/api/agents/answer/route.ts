@@ -18,7 +18,7 @@ Answer:`;
     });
 
     return NextResponse.json({ answer: text.trim() || "" }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ answer: "Sorry, I couldn't generate an answer right now." }, { status: 200 });
   }
 }

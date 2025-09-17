@@ -42,7 +42,7 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json(parsed, { status: 200 });
-  } catch (err) {
+  } catch {
     return NextResponse.json(defaultGraph(q), { status: 200 });
   }
 }
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
       parsed = defaultGraph(q);
     }
     return NextResponse.json(parsed, { status: 200 });
-  } catch (err) {
+  } catch {
     if (providedAgents && Array.isArray(providedAgents) && providedAgents.length > 0) {
       return NextResponse.json({ agents: providedAgents, edges: fallbackEdges(providedAgents) }, { status: 200 });
     }
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   }
 }
 
-function defaultGraph(q: string) {
+function defaultGraph(q: string): { agents: Agent[]; edges: Edge[] } {
   const agents: Agent[] = [
     { id: "intent-parser", name: "Intent Parser", purpose: "understand the request and extract goals" },
     { id: "planner", name: "Planner", purpose: "decompose into steps and assign agents" },
@@ -122,7 +122,7 @@ function defaultGraph(q: string) {
     { source: "executor", target: "verifier", label: "results" },
     { source: "verifier", target: "planner", label: "feedback" },
   ];
-  return { agents, edges, query: q } as any;
+  return { agents, edges };
 }
 
 function fallbackEdges(agents: Agent[]): Edge[] {

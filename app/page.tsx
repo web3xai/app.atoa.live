@@ -11,8 +11,8 @@ export default function Home() {
   const [credits, setCredits] = useState<number>(100);
 
   React.useEffect(() => {
-    function onConsume(e: any) {
-      const amt = e?.detail?.amount ?? 1;
+    function onConsume(e: Event) {
+      const amt = (e as CustomEvent<{ amount?: number }>).detail?.amount ?? 1;
       setCredits((c) => Math.max(0, c - amt));
     }
     window.addEventListener("atoa:consume-credit", onConsume);

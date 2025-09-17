@@ -55,7 +55,7 @@ export default function Sidebar({
 						)}
 					</div>
 				) : (
-          <AssistantChat onGraph={(g) => onGraphUpdate?.(g as any)} />
+					<AssistantChat graph={graph ?? undefined} onGraph={(g) => onGraphUpdate?.(g)} />
 				)}
 			</div>
 		</div>
