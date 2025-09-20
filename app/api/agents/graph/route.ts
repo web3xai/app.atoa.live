@@ -38,12 +38,12 @@ export async function GET(request: Request) {
     }
 
     if (!parsed || !Array.isArray(parsed.agents) || parsed.agents.length !== 5) {
-      parsed = defaultGraph(q);
+      parsed = defaultGraph();
     }
 
     return NextResponse.json(parsed, { status: 200 });
   } catch {
-    return NextResponse.json(defaultGraph(q), { status: 200 });
+    return NextResponse.json(defaultGraph(), { status: 200 });
   }
 }
 
@@ -95,18 +95,18 @@ export async function POST(request: Request) {
       parsed = null;
     }
     if (!parsed || !Array.isArray(parsed.agents) || parsed.agents.length !== 5) {
-      parsed = defaultGraph(q);
+      parsed = defaultGraph();
     }
     return NextResponse.json(parsed, { status: 200 });
   } catch {
     if (providedAgents && Array.isArray(providedAgents) && providedAgents.length > 0) {
       return NextResponse.json({ agents: providedAgents, edges: fallbackEdges(providedAgents) }, { status: 200 });
     }
-    return NextResponse.json(defaultGraph(q), { status: 200 });
+    return NextResponse.json(defaultGraph(), { status: 200 });
   }
 }
 
-function defaultGraph(q: string): { agents: Agent[]; edges: Edge[] } {
+function defaultGraph(): { agents: Agent[]; edges: Edge[] } {
   const agents: Agent[] = [
     { id: "intent-parser", name: "Intent Parser", purpose: "understand the request and extract goals" },
     { id: "planner", name: "Planner", purpose: "decompose into steps and assign agents" },

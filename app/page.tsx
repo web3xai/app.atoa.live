@@ -152,7 +152,6 @@ export default function Home() {
           selectedAgent={selected ? { id: selected.id, name: selected.name, score: Math.random() * 1 } : null}
           onCollapse={() => setSidebarOpen(false)}
           graph={graph}
-          onGraphUpdate={(g) => setGraph(g)}
         />
       </div>
     </div>

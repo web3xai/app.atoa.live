@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const db = await getMongoDb();
     const doc = await db.collection<Graph>("graphs").findOne({ id });
     return NextResponse.json({ graph: doc || null }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ graph: null }, { status: 200 });
   }
 }
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
       { upsert: true }
     );
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ ok: false, error: "DB_ERROR" }, { status: 500 });
   }
 }

@@ -10,13 +10,11 @@ export default function Sidebar({
 	onCollapse,
 	defaultTab = "details",
 	graph,
-	onGraphUpdate,
 }: {
 	selectedAgent: Agent | null;
 	onCollapse: () => void;
 	defaultTab?: "details" | "chat";
 	graph?: AgentGraph | null;
-	onGraphUpdate?: (g: AgentGraph) => void;
 }) {
 	const [tab, setTab] = useState<"details" | "chat">(defaultTab);
   const [full, setFull] = useState<Agent | null>(null);
@@ -38,7 +36,7 @@ export default function Sidebar({
     }
     load();
     return () => { cancelled = true; };
-  }, [selectedAgent?.id]);
+  }, [selectedAgent]);
 
 	return (
 		<div className="h-full min-h-0 grid grid-rows-[auto_auto_minmax(0,1fr)] bg-[#0b0c1a] text-white border-l border-white/10 overflow-hidden">
@@ -90,7 +88,7 @@ export default function Sidebar({
 						)}
 					</div>
 				) : (
-					<AssistantChat graph={graph ?? undefined} onGraph={(g) => onGraphUpdate?.(g)} />
+					<AssistantChat graph={graph ?? undefined} />
 				)}
 			</div>
 		</div>
