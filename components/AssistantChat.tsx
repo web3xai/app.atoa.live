@@ -7,11 +7,12 @@ import { type AgentGraph } from "@/components/FlowMap";
 
 export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; onGraph?: (g: AgentGraph) => void }) {
 	const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([
-		{ role: "assistant", text: "Hi! I can find the best agents for your task." },
+		{ role: "assistant", text: "Hi! Ask me anything." },
 	]);
 	const [input, setInput] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [persona, setPersona] = useState<string>("");
+	const [showSteps, setShowSteps] = useState<boolean>(false);
 	const scrollerRef = useRef<HTMLDivElement | null>(null);
 
 	useEffect(() => {
@@ -44,44 +45,8 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 			window.dispatchEvent(new CustomEvent("atoa:consume-credit", { detail: { amount: 1 } }));
 		} catch {}
 
-		// Stage 1: Orchestrator thinking
-		setMessages((m) => [...m, { role: "assistant", text: "Orchestrator: analyzing request and planning..." }]);
-
-		// Build a working graph baseline (prefer existing or default hardcoded order)
-		const current = graph ?? {
-			agents: [
-				{ id: "orchestrator", name: "Orchestrator" },
-				{ id: "web-search", name: "Web Search" },
-				{ id: "knowledge", name: "Knowledge" },
-				{ id: "synthesizer", name: "Synthesizer" },
-				{ id: "responder", name: "Responder" },
-			],
-			edges: [],
-		};
-
-		// Stage 2: Show edge from orchestrator to web-search
-		await new Promise((r) => setTimeout(r, 400));
-		onGraph?.({ ...current, edges: [{ source: "orchestrator", target: "web-search", label: "search" }] });
-		setMessages((m) => [...m, { role: "assistant", text: "Orchestrator ➜ Web Search: fetching fresh information..." }]);
-
-		// Stage 3: Add edge to knowledge
-		await new Promise((r) => setTimeout(r, 400));
-		onGraph?.({ ...current, edges: [
-			{ source: "orchestrator", target: "web-search", label: "search" },
-			{ source: "orchestrator", target: "knowledge", label: "retrieve" },
-		] });
-		setMessages((m) => [...m, { role: "assistant", text: "Orchestrator ➜ Knowledge: retrieving internal/domain facts..." }]);
-
-		// Stage 4: Add downstream edges to synthesizer and responder
-		await new Promise((r) => setTimeout(r, 400));
-		onGraph?.({ ...current, edges: [
-			{ source: "orchestrator", target: "web-search", label: "search" },
-			{ source: "orchestrator", target: "knowledge", label: "retrieve" },
-			{ source: "web-search", target: "synthesizer" },
-			{ source: "knowledge", target: "synthesizer" },
-			{ source: "synthesizer", target: "responder" },
-		] });
-		setMessages((m) => [...m, { role: "assistant", text: "Synthesizer: combining sources; Responder: drafting answer..." }]);
+		// Minimal UX: no orchestration chatter, no stepwise graph animations
+		// If a parent provides onGraph, we leave the current graph unchanged
 
 		try {
 			const res = await fetch("/api/agents/answer", {
@@ -89,7 +54,33 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ persona, question: userText }),
 			});
-			const data = (await res.json()) as { answer: string };
+			const data = (await res.json()) as { answer: string; trace?: string[]; activations?: string[] };
+			const traceMsgs = Array.isArray(data?.trace) ? data.trace : [];
+			// Show steps progressively with small delays and highlight inferred agents
+			if (showSteps && traceMsgs.length) {
+				for (const t of traceMsgs) {
+					setMessages((m) => [...m, { role: "assistant", text: t }]);
+					try {
+						if (graph) {
+							const name = t.split(":")[0]?.trim().toLowerCase();
+							const found = graph.agents.find((a) => a.name.toLowerCase() === name || a.id.toLowerCase() === name);
+							if (found) {
+								window.dispatchEvent(new CustomEvent("atoa:highlight-agents", { detail: { ids: [found.id] } }));
+							}
+						}
+					} catch {}
+					// small delay so users see progress
+					// eslint-disable-next-line no-await-in-loop
+					await new Promise((r) => setTimeout(r, 550));
+				}
+			}
+			// final highlight of all activations (if any) and short pause
+			try {
+				if (Array.isArray(data?.activations) && data.activations.length) {
+					window.dispatchEvent(new CustomEvent("atoa:highlight-agents", { detail: { ids: data.activations } }));
+				}
+			} catch {}
+			await new Promise((r) => setTimeout(r, traceMsgs.length ? 300 : 0));
 			setMessages((m) => [...m, { role: "assistant", text: data.answer }]);
       } catch {
 			setMessages((m) => [...m, { role: "assistant", text: "Sorry, I couldn't generate an answer right now." }]);
@@ -100,7 +91,13 @@ export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; 
 
 	return (
 		<div className="h-full flex flex-col bg-[#0f1020] text-white border-l border-white/10 min-h-0 basis-auto">
-			<header className="px-4 py-3 bg-[#141532] text-white font-extrabold flex-shrink-0">Assistant Agent</header>
+			<header className="px-4 py-3 bg-[#141532] text-white font-extrabold flex-shrink-0 flex items-center justify-between">
+				<span>Assistant Agent</span>
+				<label className="flex items-center gap-2 text-xs font-normal">
+					<input type="checkbox" checked={showSteps} onChange={(e) => setShowSteps(e.target.checked)} />
+					Show steps
+				</label>
+			</header>
 			<div className="px-3 py-2 flex gap-2 items-center bg-[#0f1020] border-b border-white/10 flex-shrink-0">
 				<span className="text-xs text-white/70">Persona</span>
 				<input

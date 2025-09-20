@@ -56,16 +56,21 @@ export default function NewAgentPage() {
     setEdges((es) => [...es, { source: ids[0]!, target: ids[1]! }]);
   }
 
-  function persistAndExit() {
+  async function persistAndExit() {
+    setError(null);
     try {
-      const key = "atoa:custom-agents";
-      const existing = JSON.parse(localStorage.getItem(key) || "[]") as AgentInput[];
-      const unique = existing.filter((a) => a.id !== agent.id);
-      localStorage.setItem(key, JSON.stringify([...unique, agent]));
+      const res = await fetch("/api/agents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: agent.id, name: agent.name, purpose: agent.purpose }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to save agent");
+      }
       router.push("/");
-    } catch {
-      // ignore
-      router.push("/");
+    } catch (e) {
+      setError("Failed to save agent");
     }
   }
 

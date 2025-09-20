@@ -20,7 +20,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { motion } from "framer-motion";
 
-function BubbleNode({ data }: { data: { label: string; color: string; purpose?: string } }) {
+function BubbleNode({ data }: { data: { label: string; color: string; purpose?: string; active?: boolean; recent?: boolean } }) {
   const [hover, setHover] = useState(false);
   return (
     <div className="relative select-none" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
@@ -28,8 +28,9 @@ function BubbleNode({ data }: { data: { label: string; color: string; purpose?: 
       <Handle id="l" type="target" position={Position.Left} style={{ background: "#ffffff", width: 10, height: 10, border: "2px solid #000" }} />
       <motion.div
         className="relative rounded-full text-black font-semibold"
-        initial={{ scale: 0.9, opacity: 0.9 }}
-        animate={{ scale: 1, opacity: 1 }}
+        initial={{ scale: 0.95, opacity: 0.95 }}
+        animate={data.active ? { scale: [1, 1.08, 1], opacity: 1 } : { scale: 1, opacity: 1 }}
+        transition={data.active ? { duration: 1.2, repeat: Infinity } : { duration: 0.2 }}
         whileHover={{ scale: 1.06 }}
         whileTap={{ scale: 0.98 }}
         style={{
@@ -43,11 +44,20 @@ function BubbleNode({ data }: { data: { label: string; color: string; purpose?: 
         <motion.div
           className="pointer-events-none absolute inset-[-6px] rounded-full"
           initial={{ opacity: 0.15 }}
-          animate={{ opacity: [0.15, 0.35, 0.15] }}
-          transition={{ duration: 2.4, repeat: Infinity }}
+          animate={data.active ? { opacity: [0.25, 0.55, 0.25] } : data.recent ? { opacity: [0.2, 0.35, 0.2] } : { opacity: 0.15 }}
+          transition={{ duration: 2.0, repeat: data.active || data.recent ? Infinity : 0 }}
           style={{ boxShadow: `0 0 24px ${data.color}` }}
         />
         {data.label}
+        {data.recent ? (
+          <motion.div
+            className="pointer-events-none absolute inset-[-12px] rounded-full"
+            initial={{ opacity: 0.0 }}
+            animate={{ opacity: [0.5, 0.2, 0.5] }}
+            transition={{ duration: 1.6, repeat: Infinity }}
+            style={{ boxShadow: `0 0 32px ${data.color}` }}
+          />
+        ) : null}
       </motion.div>
       <Handle id="r" type="source" position={Position.Right} style={{ background: "#ffffff", width: 10, height: 10, border: "2px solid #000" }} />
       <Handle id="b" type="source" position={Position.Bottom} style={{ background: "#ffffff", width: 10, height: 10, border: "2px solid #000" }} />
@@ -95,10 +105,30 @@ export const HARDCODED_TEAM: AgentGraph = {
   ],
 };
 
-export default function FlowMap({ graph, onSelect }: { graph?: AgentGraph | null; onSelect?: (agent: { id: string; name: string }) => void }) {
+export default function FlowMap({ graph, onSelect, highlight }: { graph?: AgentGraph | null; onSelect?: (agent: { id: string; name: string }) => void; highlight?: string[] }) {
   const showMiniMap = true;
   const bgVariant = BackgroundVariant.Dots;
   const animateEdges = true;
+  const [recentActive, setRecentActive] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!highlight || highlight.length === 0) return;
+    setRecentActive((prev) => {
+      const next = new Set(prev);
+      for (const id of highlight) next.add(id);
+      return next;
+    });
+    const timers = highlight.map((id) =>
+      setTimeout(() => {
+        setRecentActive((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }, 3500)
+    );
+    return () => { timers.forEach((t) => clearTimeout(t)); };
+  }, [highlight]);
   const initialNodes = useMemo<Node[]>(() => {
     const palette = ["#00BBF9", "#FEE440", "#9B5DE5", "#F15BB5", "#00F5D4"]; 
     return new Array(16).fill(0).map((_, i) => ({
@@ -133,29 +163,35 @@ export default function FlowMap({ graph, onSelect }: { graph?: AgentGraph | null
       const angle = (i / N) * Math.PI * 2;
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
+      const isActive = (highlight || []).includes(a.id);
+      const wasRecent = recentActive.has(a.id);
       return {
         id: a.id,
         type: "bubble",
         position: { x, y },
-        data: { label: a.name, color: palette[i % palette.length], purpose: a.purpose },
+        data: { label: a.name, color: isActive ? "#FEE440" : palette[i % palette.length], purpose: a.purpose, active: isActive, recent: wasRecent },
       } as Node;
     });
     const gEdges: Edge[] = graph.edges.map((e, i) => ({ id: `e-${i}`, source: e.source, target: e.target, label: e.label }));
     setNodes(gNodes);
     setEdges(gEdges);
-  }, [graph, setNodes, setEdges]);
+  }, [graph, setNodes, setEdges, highlight, recentActive]);
 
   const displayedEdges = useMemo<Edge[]>(
     () =>
       edges.map((e) => ({
         ...e,
         animated: animateEdges,
-        style: { stroke: "#00F5D4", strokeWidth: 2 },
+        style: {
+          stroke: (highlight && ((highlight.includes(e.source) && highlight.includes(e.target)) || highlight.includes(e.source) || highlight.includes(e.target))) ? "#FEE440" : "#00F5D4",
+          strokeWidth: (highlight && (highlight.includes(e.source) || highlight.includes(e.target))) ? 3 : 2,
+          filter: (highlight && highlight.includes(e.source) && highlight.includes(e.target)) ? "drop-shadow(0 0 6px #FEE440)" : undefined,
+        },
         markerEnd: { type: MarkerType.ArrowClosed, width: 18, height: 18, color: "#00F5D4" },
         label: e.label,
         labelStyle: { fill: "#a78bfa", fontWeight: 700 },
       })),
-    [edges, animateEdges]
+    [edges, animateEdges, highlight]
   );
 
   return (
