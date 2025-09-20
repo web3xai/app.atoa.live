@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       .join("\n\n");
 
     if (apiKeyMissing) {
-      return NextResponse.json({ answer: "AI model key missing. Set GOOGLE_GENERATIVE_AI_API_KEY and retry.", trace }, { status: 500 });
+      return NextResponse.json({ answer: "Model key missing. Set GOOGLE_GENERATIVE_AI_API_KEY in .env.local and restart the dev server.", trace }, { status: 200 });
     }
 
     trace.push("Orchestrator: analyzing request");
@@ -61,7 +61,26 @@ export async function POST(request: Request) {
           const a = agents.find((x) => x.id === s.id)!;
           trace.push(`${a.name}: ${s.note || "working"}`);
         }
-        const answer = String(parsed.answer || "").trim();
+        // Try a second LLM pass to produce a crisp final answer using the planned steps and agent contexts
+        try {
+          const used = agents.filter((a) => activations.includes(a.id));
+          const planLines = valid.map((s, i) => `${i + 1}. ${s.id}: ${s.note || "do step"}`).join("\n");
+          const ctx = used.map((a) => `- ${a.id} (${a.name}): purpose=${a.purpose || ""}; context=${(a.context || "").slice(0, 200)}`).join("\n");
+          const finalSynthesisPrompt = `You are the orchestrator. A plan has been selected across agents.\n` +
+            `Write the final answer for the user now.\n\n` +
+            `Persona: ${persona || "(none)"}\n` +
+            `User question: ${question || "(none)"}\n\n` +
+            `Plan steps (for your reference, do not list them):\n${planLines}\n\n` +
+            `Agent contexts:\n${ctx}\n\n` +
+            `Return only the final concise answer as plain text. Do NOT output JSON, code blocks, or markdown fences.`;
+          const { text: composed } = await generateText({ model: google("models/gemini-2.0-flash-exp"), prompt: finalSynthesisPrompt });
+          const answerSynth = toPlainAnswer(composed || "");
+          if (answerSynth) {
+            return NextResponse.json({ answer: answerSynth, trace, activations }, { status: 200 });
+          }
+        } catch {}
+        const answer = String(parsed.answer || "").trim() ||
+          `Completed: ${valid.map((s) => agents.find((a) => a.id === s.id)?.name).filter(Boolean).join(" → ")}.`;
         return NextResponse.json({ answer, trace, activations }, { status: 200 });
       }
     } catch {
@@ -96,22 +115,48 @@ export async function POST(request: Request) {
         `Answer the user's request using your capabilities.\n` +
         `Persona: ${persona || "(none)"}\n` +
         `User question: ${question || "(none)"}\n\n` +
-        `Respond concisely. Do not mention internal agent selection.`
+        `Respond concisely in plain text. Do NOT output JSON, code blocks, or markdown fences. Do not mention internal agent selection.`
       : `You are an expert orchestrator with access to specialist agents listed below.\n` +
         `Choose the best agent implicitly and answer directly. Do not mention the selection.\n` +
         `Agents:\n${catalog}\n\n` +
         `Persona: ${persona || "(none)"}\n` +
         `User question: ${question || "(none)"}\n\n` +
-        `Respond concisely.`;
+        `Respond concisely in plain text. Do NOT output JSON, code blocks, or markdown fences.`;
 
     const { text: finalOut } = await generateText({ model: google("models/gemini-2.0-flash-exp"), prompt: finalPrompt });
-    const answer = (finalOut || "").trim();
+    const answer = toPlainAnswer(finalOut || "") || `${chosen ? chosen.name : "Assistant"}: response generated.`;
     if (chosen) trace.push(`${chosen.name}: answering`);
     const activations = chosen ? [chosen.id] : [];
     return NextResponse.json({ answer, trace, activations }, { status: 200 });
   } catch {
     return NextResponse.json({ answer: "Sorry, I couldn't generate an answer right now." }, { status: 200 });
   }
+}
+
+function toPlainAnswer(raw: string): string {
+  let t = (raw || "").trim();
+  if (!t) return "";
+  t = t.replace(/^```[a-zA-Z]*\n?/, "").replace(/```$/, "").trim();
+  try {
+    const obj = JSON.parse(t);
+    if (obj && typeof obj === "object") {
+      const parts: string[] = [];
+      for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+        if (v && typeof v === "object") {
+          const inner = Object.entries(v as Record<string, unknown>)
+            .map(([ik, iv]) => `${ik.replace(/_/g, " ")}: ${String(iv)}`)
+            .join(", ");
+          parts.push(`${k}: ${inner}`);
+        } else {
+          parts.push(`${k}: ${String(v)}`);
+        }
+      }
+      return parts.join("\n");
+    }
+  } catch {
+    // not JSON; fall through
+  }
+  return t;
 }
 
 

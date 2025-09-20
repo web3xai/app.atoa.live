@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { type AgentGraph } from "@/components/FlowMap";
 
-export default function AssistantChat({ graph }: { graph?: AgentGraph }) {
+export default function AssistantChat({ graph, onGraph }: { graph?: AgentGraph; onGraph?: (g: AgentGraph) => void }) {
 	const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([
 		{ role: "assistant", text: "Hi! Ask me anything." },
 	]);
@@ -70,6 +70,7 @@ export default function AssistantChat({ graph }: { graph?: AgentGraph }) {
 						}
 					} catch {}
 					// small delay so users see progress
+					// eslint-disable-next-line no-await-in-loop
 					await new Promise((r) => setTimeout(r, 550));
 				}
 			}

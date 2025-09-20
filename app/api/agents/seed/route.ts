@@ -56,7 +56,7 @@ export async function POST() {
       { upsert: true }
     );
     return NextResponse.json({ ok: true, count: AGENTS.length }, { status: 200 });
-  } catch {
+  } catch (e) {
     return NextResponse.json({ ok: false, error: "DB_ERROR" }, { status: 500 });
   }
 }

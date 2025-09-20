@@ -8,7 +8,7 @@ export async function GET() {
     const db = await getMongoDb();
     const docs = await db.collection<DbAgent>("agents").find({}, { projection: { _id: 0 } }).sort({ updatedAt: -1 }).toArray();
     return NextResponse.json({ agents: docs }, { status: 200 });
-  } catch {
+  } catch (e) {
     return NextResponse.json({ agents: [], error: "DB_ERROR" }, { status: 200 });
   }
 }
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       { upsert: true }
     );
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch {
+  } catch (e) {
     return NextResponse.json({ ok: false, error: "DB_ERROR" }, { status: 500 });
   }
 }
@@ -47,7 +47,7 @@ export async function DELETE() {
     const db = await getMongoDb();
     await db.collection("agents").deleteMany({});
     return NextResponse.json({ ok: true }, { status: 200 });
-  } catch {
+  } catch (e) {
     return NextResponse.json({ ok: false, error: "DB_ERROR" }, { status: 500 });
   }
 }

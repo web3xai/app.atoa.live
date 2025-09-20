@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import { getMongoDb, type DbAgent } from "@/lib/mongo";
+import type { Document } from "mongodb";
 
 export const runtime = "nodejs";
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(_: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
     const db = await getMongoDb();
-    const doc = await db.collection<DbAgent>("agents").findOne({ id }, { projection: { _id: 0 } });
+    const doc = await db.collection<DbAgent>("agents").findOne({ id: params.id }, { projection: { _id: 0 } });
     return NextResponse.json({ agent: doc || null }, { status: 200 });
   } catch {
     return NextResponse.json({ agent: null }, { status: 200 });
   }
 }
 
-export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
     const body = (await request.json()) as Partial<DbAgent>;
     const now = new Date();
     const update: Partial<DbAgent> = {
@@ -26,7 +25,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       updatedAt: now,
     };
     const db = await getMongoDb();
-    await db.collection<DbAgent>("agents").updateOne({ id }, { $set: update });
+    await db.collection<DbAgent>("agents").updateOne({ id: params.id }, { $set: update });
     // Also reflect changes into saved graphs
     const setOps: Record<string, unknown> = {};
     if (update.name !== undefined) setOps["agents.$[elem].name"] = update.name;
@@ -34,9 +33,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
     if (Object.keys(setOps).length > 0) {
       try {
         await db.collection("graphs").updateMany(
-          { "agents.id": id },
+          { "agents.id": params.id },
           { $set: setOps },
-          { arrayFilters: [{ "elem.id": id }] }
+          { arrayFilters: [{ "elem.id": params.id }] as Document[] }
         );
       } catch {}
     }
@@ -46,23 +45,19 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_: Request, { params }: { params: { id: string } }) {
   try {
-    const { id } = await params;
     const db = await getMongoDb();
-    await db.collection("agents").deleteOne({ id });
+    await db.collection("agents").deleteOne({ id: params.id });
     // Also remove from default graph if present
+    // Use aggregation-style updates to avoid TS PullOperator typing issues
     await db.collection("graphs").updateOne(
       { id: "default" },
-      { $pull: { agents: { id } } } as Record<string, unknown>
+      [{ $set: { agents: { $filter: { input: "$agents", as: "a", cond: { $ne: ["$$a.id", params.id] } } } } } as unknown as Document]
     );
     await db.collection("graphs").updateOne(
       { id: "default" },
-      { $pull: { edges: { source: id } } } as Record<string, unknown>
-    );
-    await db.collection("graphs").updateOne(
-      { id: "default" },
-      { $pull: { edges: { target: id } } } as Record<string, unknown>
+      [{ $set: { edges: { $filter: { input: "$edges", as: "e", cond: { $and: [{ $ne: ["$$e.source", params.id] }, { $ne: ["$$e.target", params.id] }] } } } } } as unknown as Document]
     );
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch {
